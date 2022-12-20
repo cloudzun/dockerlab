@@ -2320,6 +2320,8 @@ Weave Scope is listening at the following URL(s):
 
 ![image-20221220160137673](README.assets/image-20221220160137673.png)
 
+注意: weavescope工作在4040端口，不会要求创建管理员账号，非常危险，主要用于直观展现容器间的调用，也可以用于和容器 宿主机之间的交互式操作。
+
 
 
 安装 Prometheus 堆栈
@@ -2352,6 +2354,6 @@ ADMIN_USER=admin ADMIN_PASSWORD=admin docker-compose up -d
 
 
 
-从weavescope页面中观察的  dockprom  堆栈中容器的相互调用关系
+从weavescope页面中观察的  dockprom  堆栈中诸容器相互调用关系
 
 ![image-20221220161154248](README.assets/image-20221220161154248.png)
