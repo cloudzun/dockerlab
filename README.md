@@ -974,6 +974,8 @@ docker stop $(docker ps -a -q);docker rm $(docker ps -a -q)
 
 # Docker 数据存储
 
+## 数据卷
+
 创建index.html文件
 
 ```bash
@@ -1041,6 +1043,8 @@ root@node1:~/http# curl localhost
 ```
 
 
+
+## 托管数据卷
 
 使用以下命令创建使启用managed volume的容器，注意它的端口是81
 
@@ -1138,6 +1142,8 @@ docker stop $(docker ps -a -q);docker rm $(docker ps -a -q)
 # Docker 网络
 
 
+
+## bridge 网络和 veth pair
 
 在宿主机上列出所有的网络类型
 
@@ -1497,6 +1503,8 @@ exit
 
 
 
+## 自定义网络
+
 创建自定义网络
 
 ```bash
@@ -1776,13 +1784,67 @@ root@node1:~/http# docker inspect bridge
 
 
 
+## 内存分配限制
+
 合理分配，循环释放测试
 
 ```bash
 docker run -it -m 300M progrium/stress --vm 1 --vm-bytes 280M
 ```
 
-  需要使用ctrl c终止容器
+  
+
+```bash
+root@node1:~/http# docker run -it -m 300M progrium/stress --vm 1 --vm-bytes 280M
+Unable to find image 'progrium/stress:latest' locally
+latest: Pulling from progrium/stress
+Image docker.io/progrium/stress:latest uses outdated schema1 manifest format. Please upgrade to a schema2 image for better future compatibility. More information at https://docs.docker.com/registry/spec/deprecated-schema-v1/
+a3ed95caeb02: Pull complete
+871c32dbbb53: Pull complete
+dbe7819a64dd: Pull complete
+d14088925c6e: Pull complete
+58026d51efe4: Pull complete
+7d04a4fe1405: Pull complete
+1775fca35fb6: Pull complete
+5c319e267908: Pull complete
+Digest: sha256:e34d56d60f5caae79333cee395aae93b74791d50e3841986420d23c2ee4697bf
+Status: Downloaded newer image for progrium/stress:latest
+WARNING: Your kernel does not support swap limit capabilities or the cgroup is not mounted. Memory limited without swap.
+stress: info: [1] dispatching hogs: 0 cpu, 0 io, 1 vm, 0 hdd
+stress: dbug: [1] using backoff sleep of 3000us
+stress: dbug: [1] --> hogvm worker 1 [7] forked
+stress: dbug: [7] allocating 293601280 bytes ...
+stress: dbug: [7] touching bytes in strides of 4096 bytes ...
+stress: dbug: [7] freed 293601280 bytes
+stress: dbug: [7] allocating 293601280 bytes ...
+stress: dbug: [7] touching bytes in strides of 4096 bytes ...
+stress: dbug: [7] freed 293601280 bytes
+stress: dbug: [7] allocating 293601280 bytes ...
+stress: dbug: [7] touching bytes in strides of 4096 bytes ...
+stress: dbug: [7] freed 293601280 bytes
+stress: dbug: [7] allocating 293601280 bytes ...
+stress: dbug: [7] touching bytes in strides of 4096 bytes ...
+stress: dbug: [7] freed 293601280 bytes
+stress: dbug: [7] allocating 293601280 bytes ...
+stress: dbug: [7] touching bytes in strides of 4096 bytes ...
+stress: dbug: [7] freed 293601280 bytes
+stress: dbug: [7] allocating 293601280 bytes ...
+stress: dbug: [7] touching bytes in strides of 4096 bytes ...
+stress: dbug: [7] freed 293601280 bytes
+stress: dbug: [7] allocating 293601280 bytes ...
+...
+```
+
+
+
+需要使用ctrl c终止容器
+
+```bash
+^Cstress: FAIL: [1] (416) <-- worker 7 got signal 2
+stress: WARN: [1] (418) now reaping child worker processes
+stress: FAIL: [1] (422) kill error: No such process
+stress: FAIL: [1] (452) failed run completed in 40s
+```
 
 
 
@@ -1790,6 +1852,22 @@ docker run -it -m 300M progrium/stress --vm 1 --vm-bytes 280M
 
 ```bash
 docker run -it -m 300M progrium/stress --vm 1 --vm-bytes 310M
+```
+
+
+
+```bash
+root@node1:~/http# docker run -it -m 300M progrium/stress --vm 1 --vm-bytes 310M
+WARNING: Your kernel does not support swap limit capabilities or the cgroup is not mounted. Memory limited without swap.
+stress: info: [1] dispatching hogs: 0 cpu, 0 io, 1 vm, 0 hdd
+stress: dbug: [1] using backoff sleep of 3000us
+stress: dbug: [1] --> hogvm worker 1 [7] forked
+stress: dbug: [7] allocating 325058560 bytes ...
+stress: dbug: [7] touching bytes in strides of 4096 bytes ...
+stress: FAIL: [1] (416) <-- worker 7 got signal 9
+stress: WARN: [1] (418) now reaping child worker processes
+stress: FAIL: [1] (422) kill error: No such process
+stress: FAIL: [1] (452) failed run completed in 0s
 ```
 
 很快内存耗尽，容器被强行终止
@@ -1804,13 +1882,13 @@ docker stop $(docker ps -a -q);docker rm $(docker ps -a -q)
 
 
 
-CPU分配限制
+## CPU分配限制
 
-创建两个不同优先级的容器，根据宿主机cpu数量设置参数
+创建两个不同优先级的容器，根据宿主机cpu数量设置参数,此处为2
 
 ```bash
-docker run --name containerA -d  -c 1024 progrium/stress --cpu 1
-docker run --name containerB -d  -c 512 progrium/stress --cpu 1
+docker run --name containerA -d  -c 1024 progrium/stress --cpu 2
+docker run --name containerB -d  -c 512 progrium/stress --cpu 2
 ```
 
 
@@ -1819,6 +1897,14 @@ docker run --name containerB -d  -c 512 progrium/stress --cpu 1
 
 ```bash
 docker stats
+```
+
+
+
+```bash
+CONTAINER ID   NAME         CPU %     MEM USAGE / LIMIT     MEM %     NET I/O     BLOCK I/O   PIDS
+cf6e7043b57b   containerB   65.70%    1.008MiB / 7.771GiB   0.01%     586B / 0B   0B / 0B     3
+d79a9db0c11e   containerA   132.24%   1.062MiB / 7.771GiB   0.01%     806B / 0B   0B / 0B     3
 ```
 
 
@@ -1832,7 +1918,30 @@ docker stop containerA
 docker stats
 ```
 
+
+
+```bash
+CONTAINER ID   NAME         CPU %     MEM USAGE / LIMIT     MEM %     NET I/O     BLOCK I/O   PIDS
+cf6e7043b57b   containerB   198.09%   1.008MiB / 7.771GiB   0.01%     796B / 0B   0B / 0B     3
+```
+
+
+
 查看容器B内部的进程
+
+```bash
+docker top containerB
+```
+
+
+
+```bash
+root@node1:~/http# docker top containerB
+UID                 PID                 PPID                C                   STIME               TTY                 TIME                CMD
+root                166847              166824              0                   15:24               ?                   00:00:00            /usr/bin/stress --verbose --cpu 2
+root                166882              166847              52                  15:24               ?                   00:01:13            /usr/bin/stress --verbose --cpu 2
+root                166883              166847              52                  15:24               ?                   00:01:12            /usr/bin/stress --verbose --cpu 2
+```
 
 
 
@@ -1842,9 +1951,9 @@ docker stats
 docker stop $(docker ps -a -q);docker rm $(docker ps -a -q)
 ```
 
- 
 
-# 使用 docker-compose 部署复杂应用
+
+# docker-compose 部署复杂应用
 
 
 
@@ -1870,14 +1979,13 @@ services:
    db:
      image: mysql:5.7
      volumes:
-
-   - db_data:/var/lib/mysql
-     tart: always
-          environment:
-            MYSQL_ROOT_PASSWORD: somewordpress
-            MYSQL_DATABASE: wordpress
-            MYSQL_USER: wordpress
-            MYSQL_PASSWORD: wordpress
+       - db_data:/var/lib/mysql
+     restart: always
+     environment:
+       MYSQL_ROOT_PASSWORD: somewordpress
+       MYSQL_DATABASE: wordpress
+       MYSQL_USER: wordpress
+       MYSQL_PASSWORD: wordpress
 
    wordpress:
      depends_on:
@@ -1904,6 +2012,56 @@ docker-compose up -d
 
 
 
+```bash
+root@node1:~# docker-compose up -d
+Creating network "root_default" with the default driver
+Creating volume "root_db_data" with default driver
+Pulling db (mysql:5.7)...
+5.7: Pulling from library/mysql
+d26998a7c52d: Pull complete
+4a9d8a3567e3: Pull complete
+bfee1f0f349e: Pull complete
+71ff8dfb9b12: Pull complete
+bf56cbebc916: Pull complete
+2e747e5e37d7: Pull complete
+711a06e512da: Pull complete
+3288d68e4e9e: Pull complete
+49271f2d6d15: Pull complete
+f782f6cac69c: Pull complete
+701dea355691: Pull complete
+Digest: sha256:6306f106a056e24b3a2582a59a4c84cd199907f826eff27df36406f227cd9a7d
+Status: Downloaded newer image for mysql:5.7
+Pulling wordpress (wordpress:latest)...
+latest: Pulling from library/wordpress
+025c56f98b67: Already exists
+db4ab4019a6f: Pull complete
+19c3d46c565a: Pull complete
+7d52c3b9728a: Pull complete
+075f56345cf3: Pull complete
+84f1e4bf8884: Pull complete
+33c195cea794: Pull complete
+23c53708753b: Pull complete
+3bba2691b9ce: Pull complete
+ffec2fbde892: Pull complete
+28e5d9f2c72e: Pull complete
+af4d79f95c00: Pull complete
+c765960147ec: Pull complete
+1ca504b60df8: Pull complete
+0fe9ebf0f00e: Pull complete
+1a97859a7b0e: Pull complete
+adf5a5af2aa6: Pull complete
+e79a82e9f5f1: Pull complete
+5d47d3a005c5: Pull complete
+12cf3737dd75: Pull complete
+ceb0f6853bcf: Pull complete
+Digest: sha256:5e9bf24b13d1ee29c2f7bf086e544c2fd9aa4e60f0f4071f3f53beb20e079313
+Status: Downloaded newer image for wordpress:latest
+Creating root_db_1 ... done
+Creating root_wordpress_1 ... done
+```
+
+
+
 查看容器和映像
 
 ```bash
@@ -1914,10 +2072,26 @@ docker images
 
 
 
-查看docke volume
-
 ```bash
-docker volume ls
+root@node1:~# docker ps
+CONTAINER ID   IMAGE              COMMAND                  CREATED          STATUS          PORTS                                   NAMES
+5d7e27f7e6ba   wordpress:latest   "docker-entrypoint.s…"   42 seconds ago   Up 41 seconds   0.0.0.0:8000->80/tcp, :::8000->80/tcp   root_wordpress_1
+35cbfc35fd4f   mysql:5.7          "docker-entrypoint.s…"   43 seconds ago   Up 41 seconds   3306/tcp, 33060/tcp                     root_db_1
+root@node1:~#
+root@node1:~# docker images
+REPOSITORY                       TAG       IMAGE ID       CREATED         SIZE
+chengzh/httpd                    latest    b15f80031aa4   5 hours ago     145MB
+myhttpd                          latest    b15f80031aa4   5 hours ago     145MB
+localhost:5000/httpd             v1.0      b15f80031aa4   5 hours ago     145MB
+httpdnew                         latest    d079e3dd8acf   5 hours ago     165MB
+mysql                            5.7       d410f4167eea   13 days ago     495MB
+wordpress                        latest    8b105c533d0c   13 days ago     615MB
+httpd                            latest    157dcdf23d6c   13 days ago     145MB
+registry                         2         81c944c2288b   5 weeks ago     24.1MB
+dorowu/ubuntu-desktop-lxde-vnc   latest    1a89db715923   20 months ago   1.32GB
+tutum/wordpress                  latest    7e7f97a602ff   6 years ago     477MB
+alexwhen/docker-2048             latest    7929bcd70e47   7 years ago     8.02MB
+progrium/stress                  latest    db646a8f4087   8 years ago     282MB
 ```
 
 
@@ -1930,11 +2104,156 @@ docker inspect root_db_1
 
 
 
-停止容器
+```bash
+...
+"Mounts": [
+            {
+                "Type": "volume",
+                "Name": "root_db_data",
+                "Source": "/var/lib/docker/volumes/root_db_data/_data",
+                "Destination": "/var/lib/mysql",
+                "Driver": "local",
+                "Mode": "rw",
+                "RW": true,
+                "Propagation": ""
+            }
+        ],
+...
+```
+
+
+
+查看docker volume
+
+```bash
+docker volume ls
+```
+
+
+
+```bash
+root@node1:~# docker volume ls
+DRIVER    VOLUME NAME
+local     41d534750d3bb0a4d2a07b98b190f0d278d82c272fc1cd6f73eeba17db71536d
+local     85b0a27fdce4f8a46831a7a826e5d4d9035985d033ee4c722468e9a77b2b3f2a
+local     335d6617af41e391ad550d10c7b47146c2d2c364cf46750ded1e4446196cdbba
+local     c948c4312f8b57b14b620a4ad5c5d1c6bedfe46eda33e1a82856eb20116876e4
+local     root_db_data
+```
+
+
+
+查看数据卷 `root_db_data` 配置细节
+
+```bash
+docker inspect root_db_data
+```
+
+
+
+```bash
+root@node1:~# docker inspect root_db_data
+[
+    {
+        "CreatedAt": "2022-12-20T15:37:57+08:00",
+        "Driver": "local",
+        "Labels": {
+            "com.docker.compose.project": "root",
+            "com.docker.compose.version": "1.25.0",
+            "com.docker.compose.volume": "db_data"
+        },
+        "Mountpoint": "/var/lib/docker/volumes/root_db_data/_data",
+        "Name": "root_db_data",
+        "Options": null,
+        "Scope": "local"
+    }
+]
+```
+
+
+
+使用浏览器登录到wordpress,初始化,并且写一个blog
+
+![image-20221220154638951](README.assets/image-20221220154638951.png)
+
+停止wordpress堆栈
 
 ```bash
 docker-compose down
 ```
+
+
+
+```bash
+root@node1:~# docker-compose down
+Stopping root_wordpress_1 ... done
+Stopping root_db_1        ... done
+Removing root_wordpress_1 ... done
+Removing root_db_1        ... done
+Removing network root_default
+```
+
+
+
+检查容器和数据卷
+
+```bash
+docker ps
+
+docker volume ls
+```
+
+
+
+```bash
+root@node1:~# docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+root@node1:~#
+root@node1:~# docker volume ls
+DRIVER    VOLUME NAME
+local     41d534750d3bb0a4d2a07b98b190f0d278d82c272fc1cd6f73eeba17db71536d
+local     85b0a27fdce4f8a46831a7a826e5d4d9035985d033ee4c722468e9a77b2b3f2a
+local     335d6617af41e391ad550d10c7b47146c2d2c364cf46750ded1e4446196cdbba
+local     c948c4312f8b57b14b620a4ad5c5d1c6bedfe46eda33e1a82856eb20116876e4
+local     root_db_data
+```
+
+可以观察到容器已经消失,但是数据卷还存留
+
+
+
+使用浏览器刷新此前blog的地址
+
+![image-20221220154910625](README.assets/image-20221220154910625.png)
+
+重建 wordpress 堆栈
+
+```bash
+docker-compose up -d
+```
+
+
+
+```bash
+root@node1:~# docker-compose up -d
+Creating network "root_default" with the default driver
+Creating root_db_1 ... done
+Creating root_wordpress_1 ... done
+```
+
+
+
+再次使用浏览器刷新此前blog的地址
+
+![image-20221220155151778](README.assets/image-20221220155151778.png)
+
+清理 wordpress 堆栈,并删除数据
+
+```bash
+docker-compose down --volumes
+```
+
+
 
 
 
