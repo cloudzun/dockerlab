@@ -1147,10 +1147,62 @@ docker network ls
 
  
 
+```bash
+root@node1:~/http# docker network ls
+NETWORK ID     NAME      DRIVER    SCOPE
+c42f94ef95f4   bridge    bridge    local
+ae5dcb8841fa   host      host      local
+7b606c3bae97   none      null      local
+```
+
+
+
 检查bridge网络
 
 ```bash
 docker inspect bridge
+```
+
+
+
+```bash
+root@node1:~/http# docker inspect bridge
+[
+    {
+        "Name": "bridge",
+        "Id": "c42f94ef95f44ede8b5a51dff776045ca8b3fd574f0354451f790f8010d48006",
+        "Created": "2022-12-20T09:06:01.220165025+08:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": null,
+            "Config": [
+                {
+                    "Subnet": "172.17.0.0/16"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {},
+        "Options": {
+            "com.docker.network.bridge.default_bridge": "true",
+            "com.docker.network.bridge.enable_icc": "true",
+            "com.docker.network.bridge.enable_ip_masquerade": "true",
+            "com.docker.network.bridge.host_binding_ipv4": "0.0.0.0",
+            "com.docker.network.bridge.name": "docker0",
+            "com.docker.network.driver.mtu": "1500"
+        },
+        "Labels": {}
+    }
+]
 ```
 
 
@@ -1161,7 +1213,15 @@ docker inspect bridge
 brctl show
 ```
 
-  注意：可能需要执行安装brctl sudo apt install bridge-utils
+
+
+```bash
+root@node1:~/http# brctl show
+bridge name     bridge id               STP enabled     interfaces
+docker0         8000.0242a5e71d60       no
+```
+
+  注意：如果 `brctl` 没有安装需要执行 `brctl sudo apt install bridge-utils`
 
 
 
@@ -1169,6 +1229,32 @@ brctl show
 
 ```bash
 ip add
+```
+
+
+
+```bash
+root@node1:~/http# ip add
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host
+       valid_lft forever preferred_lft forever
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+    link/ether 00:15:5d:01:03:32 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.1.231/24 brd 192.168.1.255 scope global noprefixroute eth0
+       valid_lft forever preferred_lft forever
+    inet6 2409:8a1e:6a62:de40:215:5dff:fe01:332/64 scope global dynamic mngtmpaddr
+       valid_lft 258715sec preferred_lft 172315sec
+    inet6 fe80::215:5dff:fe01:332/64 scope link
+       valid_lft forever preferred_lft forever
+3: docker0: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state DOWN group default
+    link/ether 02:42:a5:e7:1d:60 brd ff:ff:ff:ff:ff:ff
+    inet 172.17.0.1/16 brd 172.17.255.255 scope global docker0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::42:a5ff:fee7:1d60/64 scope link
+       valid_lft forever preferred_lft forever
 ```
 
 
@@ -1189,11 +1275,53 @@ brctl show
 
  
 
+```bash
+root@node1:~/http# brctl show
+bridge name     bridge id               STP enabled     interfaces
+docker0         8000.0242a5e71d60       no              vethf3bd9f1
+```
+
+注意上述输出 `docker0` 增加了新的 `interfaces` 
+
+
+
 查看新增加的veth的细节
 
 ```bash
 ip add
 ```
+
+
+
+```bash
+root@node1:~/http# ip add
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host
+       valid_lft forever preferred_lft forever
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+    link/ether 00:15:5d:01:03:32 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.1.231/24 brd 192.168.1.255 scope global noprefixroute eth0
+       valid_lft forever preferred_lft forever
+    inet6 2409:8a1e:6a62:de40:215:5dff:fe01:332/64 scope global dynamic mngtmpaddr
+       valid_lft 259068sec preferred_lft 172668sec
+    inet6 fe80::215:5dff:fe01:332/64 scope link
+       valid_lft forever preferred_lft forever
+3: docker0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default
+    link/ether 02:42:a5:e7:1d:60 brd ff:ff:ff:ff:ff:ff
+    inet 172.17.0.1/16 brd 172.17.255.255 scope global docker0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::42:a5ff:fee7:1d60/64 scope link
+       valid_lft forever preferred_lft forever
+29: vethf3bd9f1@if28: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker0 state UP group default
+    link/ether 46:40:7f:aa:4c:3b brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet6 fe80::4440:7fff:feaa:4c3b/64 scope link
+       valid_lft forever preferred_lft forever
+```
+
+对比来看,上述输出多了 `29: vethf3bd9f1@if28:`
 
 
 
@@ -1205,7 +1333,29 @@ docker exec -it httpd1 bash
 apt-get update && apt-get install -y iproute2
 
 ip a
+```
 
+
+
+```bash
+root@33a31cced39b:/usr/local/apache2# ip a
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+28: eth0@if29: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default
+    link/ether 02:42:ac:11:00:02 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet 172.17.0.2/16 brd 172.17.255.255 scope global eth0
+       valid_lft forever preferred_lft forever
+```
+
+观察此处的 `28: eth0@if29:` 
+
+
+
+退出容器
+
+```
 exit 
 ```
 
@@ -1214,8 +1364,60 @@ exit
 在宿主机上观察bridge 网络，注意观察veth
 
 ```bash
-docker inspect network bridge
+docker inspect bridge
 ```
+
+
+
+```bash
+root@node1:~/http# docker inspect bridge
+[
+    {
+        "Name": "bridge",
+        "Id": "c42f94ef95f44ede8b5a51dff776045ca8b3fd574f0354451f790f8010d48006",
+        "Created": "2022-12-20T09:06:01.220165025+08:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": null,
+            "Config": [
+                {
+                    "Subnet": "172.17.0.0/16"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {
+            "33a31cced39bde3a6eaf12dce6cb1cf1071f05ebce6bef2c48a89445db855d67": {
+                "Name": "httpd1",
+                "EndpointID": "c4d4ebce2251275d4d5f3fcaaa98349b1dc31b30abb66fdffef6908d2e68a2bf",
+                "MacAddress": "02:42:ac:11:00:02",
+                "IPv4Address": "172.17.0.2/16",
+                "IPv6Address": ""
+            }
+        },
+        "Options": {
+            "com.docker.network.bridge.default_bridge": "true",
+            "com.docker.network.bridge.enable_icc": "true",
+            "com.docker.network.bridge.enable_ip_masquerade": "true",
+            "com.docker.network.bridge.host_binding_ipv4": "0.0.0.0",
+            "com.docker.network.bridge.name": "docker0",
+            "com.docker.network.driver.mtu": "1500"
+        },
+        "Labels": {}
+    }
+]
+```
+
+特别关注 `Containers` 部分
 
 
 
@@ -1235,6 +1437,15 @@ brctl show
 
 
 
+```bash
+root@node1:~/http# brctl show
+bridge name     bridge id               STP enabled     interfaces
+docker0         8000.0242a5e71d60       no              veth7f20d2a
+                                                        vethf3bd9f1
+```
+
+
+
 宿主机上查看 veth 连接信息
 
 ```bash
@@ -1243,12 +1454,45 @@ ip link
 
 
 
-在容器内部查看veth pair 信息
+```bash
+root@node1:~/http# ip link
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DEFAULT group default qlen 1000
+    link/ether 00:15:5d:01:03:32 brd ff:ff:ff:ff:ff:ff
+3: docker0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default
+    link/ether 02:42:a5:e7:1d:60 brd ff:ff:ff:ff:ff:ff
+29: vethf3bd9f1@if28: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker0 state UP mode DEFAULT group default
+    link/ether 46:40:7f:aa:4c:3b brd ff:ff:ff:ff:ff:ff link-netnsid 0
+31: veth7f20d2a@if30: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker0 state UP mode DEFAULT group default
+    link/ether 42:f3:68:1b:f4:d3 brd ff:ff:ff:ff:ff:ff link-netnsid 1
+```
+
+此处的 `31: veth7f20d2a@if30:`  就是指向新容器的 `veth pair` 
+
+
+
+在容器内部查看 `veth pair` 信息
 
 ```bash
 docker exec -it httpd2 bash
 
 cat /sys/class/net/eth0/iflink
+```
+
+
+
+```bash
+root@node1:~/http# docker exec -it httpd2 bash
+cat /sys/class/net/eth0/iflinkroot@ed8bda238d45:/usr/local/apache2#
+root@ed8bda238d45:/usr/local/apache2# cat /sys/class/net/eth0/iflink
+31
+```
+
+
+
+```bash
+exit
 ```
 
 
@@ -1269,6 +1513,42 @@ docker network inspect mynetwork
 
 
 
+```bash
+root@node1:~/http# docker network inspect mynetwork
+[
+    {
+        "Name": "mynetwork",
+        "Id": "39c556a1568de424a113e0964fcf92a22d31284d114f8c297aabaeffcf06b672",
+        "Created": "2022-12-20T15:04:11.052764603+08:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": {},
+            "Config": [
+                {
+                    "Subnet": "172.22.16.0/24",
+                    "Gateway": "172.22.16.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {},
+        "Options": {},
+        "Labels": {}
+    }
+]
+```
+
+
+
 创建容器使用新建的自定义网络
 
 ```bash
@@ -1285,7 +1565,25 @@ docker exec -it httpd3 bash
 apt-get update && apt-get install -y iproute2
 
 ip add
+```
 
+
+
+```bash
+root@3b8c2ca4f729:/usr/local/apache2# ip add
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+33: eth0@if34: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default
+    link/ether 02:42:ac:16:10:02 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet 172.22.16.2/24 brd 172.22.16.255 scope global eth0
+       valid_lft forever preferred_lft forever
+```
+
+
+
+```bash
 exit
 ```
 
@@ -1307,6 +1605,46 @@ docker container inspect httpd1
 
 
 
+```bash
+...
+"Networks": {
+                "bridge": {
+                    "IPAMConfig": null,
+                    "Links": null,
+                    "Aliases": null,
+                    "NetworkID": "c42f94ef95f44ede8b5a51dff776045ca8b3fd574f0354451f790f8010d48006",
+                    "EndpointID": "c4d4ebce2251275d4d5f3fcaaa98349b1dc31b30abb66fdffef6908d2e68a2bf",
+                    "Gateway": "172.17.0.1",
+                    "IPAddress": "172.17.0.2",
+                    "IPPrefixLen": 16,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "MacAddress": "02:42:ac:11:00:02",
+                    "DriverOpts": null
+                },
+                "mynetwork": {
+                    "IPAMConfig": {},
+                    "Links": null,
+                    "Aliases": [
+                        "33a31cced39b"
+                    ],
+                    "NetworkID": "39c556a1568de424a113e0964fcf92a22d31284d114f8c297aabaeffcf06b672",
+                    "EndpointID": "cc114d945773badea28d9fe841efa7a814a1d2c8edcb07fdc7b1dcf92901f006",
+                    "Gateway": "172.22.16.1",
+                    "IPAddress": "172.22.16.3",
+                    "IPPrefixLen": 24,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "MacAddress": "02:42:ac:16:10:03",
+                    "DriverOpts": {}
+                }
+...
+```
+
+
+
 在 httpd3 中ping httpd1
 
 ```bash
@@ -1315,11 +1653,41 @@ docker exec -it httpd3 bash
 apt-get update && apt-get install -y iputils-ping
 
 ping 172.22.16.3
+```
 
+
+
+```bash
+root@3b8c2ca4f729:/usr/local/apache2# ping 172.22.16.3
+PING 172.22.16.3 (172.22.16.3) 56(84) bytes of data.
+64 bytes from 172.22.16.3: icmp_seq=1 ttl=64 time=0.064 ms
+64 bytes from 172.22.16.3: icmp_seq=2 ttl=64 time=0.045 ms
+64 bytes from 172.22.16.3: icmp_seq=3 ttl=64 time=0.051 ms
+64 bytes from 172.22.16.3: icmp_seq=4 ttl=64 time=0.051 ms
+64 bytes from 172.22.16.3: icmp_seq=5 ttl=64 time=0.048 ms
+64 bytes from 172.22.16.3: icmp_seq=6 ttl=64 time=0.048 ms
+```
+
+
+
+```
 apt-get update && apt-get install -y traceroute
 
 traceroute 172.22.16.3
+```
 
+
+
+```bash
+traceroute to 172.22.16.3 (172.22.16.3), 30 hops max, 60 byte packets
+ 1  httpd1.mynetwork (172.22.16.3)  0.257 ms  0.213 ms  0.200 ms
+```
+
+
+
+退出容器
+
+```
 exit
 ```
 
@@ -1334,12 +1702,72 @@ docker network rm mynetwork
 
 
 
+```bash
+root@node1:~/http# docker stop $(docker ps -a -q);docker rm $(docker ps -a -q)
+3b8c2ca4f729
+ed8bda238d45
+33a31cced39b
+3b8c2ca4f729
+ed8bda238d45
+33a31cced39b
+root@node1:~/http# docker network rm mynetwork
+mynetwork
+```
+
+
+
 再观察一下宿主机网络设置
 
 ```bash
 brctl show
 
 docker inspect bridge
+```
+
+
+
+```bash
+root@node1:~/http# brctl show
+bridge name     bridge id               STP enabled     interfaces
+docker0         8000.0242a5e71d60       no
+root@node1:~/http#
+root@node1:~/http# docker inspect bridge
+[
+    {
+        "Name": "bridge",
+        "Id": "c42f94ef95f44ede8b5a51dff776045ca8b3fd574f0354451f790f8010d48006",
+        "Created": "2022-12-20T09:06:01.220165025+08:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": null,
+            "Config": [
+                {
+                    "Subnet": "172.17.0.0/16"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {},
+        "Options": {
+            "com.docker.network.bridge.default_bridge": "true",
+            "com.docker.network.bridge.enable_icc": "true",
+            "com.docker.network.bridge.enable_ip_masquerade": "true",
+            "com.docker.network.bridge.host_binding_ipv4": "0.0.0.0",
+            "com.docker.network.bridge.name": "docker0",
+            "com.docker.network.driver.mtu": "1500"
+        },
+        "Labels": {}
+    }
+]
 ```
 
 
@@ -1356,6 +1784,8 @@ docker run -it -m 300M progrium/stress --vm 1 --vm-bytes 280M
 
   需要使用ctrl c终止容器
 
+
+
 反面例子
 
 ```bash
@@ -1364,11 +1794,15 @@ docker run -it -m 300M progrium/stress --vm 1 --vm-bytes 310M
 
 很快内存耗尽，容器被强行终止
 
+
+
 清理现场
 
 ```bash
 docker stop $(docker ps -a -q);docker rm $(docker ps -a -q)
 ```
+
+
 
 CPU分配限制
 
@@ -1399,6 +1833,8 @@ docker stats
 ```
 
 查看容器B内部的进程
+
+
 
 清理现场
 
