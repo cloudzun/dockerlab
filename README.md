@@ -970,3 +970,563 @@ root@node1:~/httpd# curl localhost
 docker stop $(docker ps -a -q);docker rm $(docker ps -a -q)
 ```
 
+
+
+# Docker 数据存储
+
+创建index.html文件
+
+```bash
+mkdir http
+
+cd http
+
+nano index.html
+```
+
+
+
+```html
+<html><body><h1>Go West!</h1></body></html>
+```
+
+
+
+创建使用bind mount数据卷的容器
+
+```bash
+docker run -d -p 80:80 -v ~/http:/usr/local/apache2/htdocs httpd
+```
+
+
+
+```bash
+curl localhost
+```
+
+
+
+```bash
+root@node1:~/http# docker run -d -p 80:80 -v ~/http:/usr/local/apache2/htdocs httpd
+028743d3aa1584e7eddfd6955d7351b4d3fc3cb59b90e299269a3c1c5a5b61cd
+root@node1:~/http# curl localhost
+<html><body><h1>Go West!</h1></body></html>
+```
+
+
+
+尝试在宿主机修改index.html文件，并查看容器变化情况
+
+```
+nano index.html
+```
+
+
+
+```html
+<html><body><h1>Go go big or go home!</h1></body></html>
+```
+
+
+
+```bash
+curl localhost
+```
+
+
+
+```bash
+root@node1:~/http# curl localhost
+<html><body><h1>Go go big or go home!</h1></body></html>
+```
+
+
+
+使用以下命令创建使启用managed volume的容器，注意它的端口是81
+
+```bash
+docker run -d -p 81:80 -v /usr/local/apache2/htdocs httpd
+```
+
+
+
+查看容器页面
+
+```bash
+curl localhost:81
+```
+
+
+
+```bash
+root@node1:~/http# curl localhost:81
+<html><body><h1>It works!</h1></body></html>
+```
+
+
+
+查看容器详细配置
+
+```
+docker ps
+```
+
+
+
+```bash
+CONTAINER ID   IMAGE     COMMAND              CREATED              STATUS              PORTS                               NAMES
+f6fbd7a633e3   httpd     "httpd-foreground"   About a minute ago   Up About a minute   0.0.0.0:81->80/tcp, :::81->80/tcp   angry_rubin
+028743d3aa15   httpd     "httpd-foreground"   7 minutes ago        Up 7 minutes        0.0.0.0:80->80/tcp, :::80->80/tcp   sad_greider
+```
+
+特别关注 `CONTAINER ID`
+
+
+
+```bash
+docker inspect container id
+```
+
+
+
+```bash
+...
+ "Mounts": [
+            {
+                "Type": "volume",
+                "Name": "85b0a27fdce4f8a46831a7a826e5d4d9035985d033ee4c722468e9a77b2b3f2a",
+                "Source": "/var/lib/docker/volumes/85b0a27fdce4f8a46831a7a826e5d4d9035985d033ee4c722468e9a77b2b3f2a/_data",
+                "Destination": "/usr/local/apache2/htdocs",
+                "Driver": "local",
+                "Mode": "",
+                "RW": true,
+                "Propagation": ""
+            }
+        ],
+
+...
+```
+
+特别关注 `source` 的属性
+
+
+
+修改index.html，并查看结果
+
+```bash
+sudo nano source dir/index.html
+```
+
+
+
+```bash
+root@node1:~/http# sudo nano /var/lib/docker/volumes/85b0a27fdce4f8a46831a7a826e5d4d9035985d033ee4c722468e9a77b2b3f2a/_data/index.html
+root@node1:~/http# curl localhost:81
+<html><body><h1>It works again!</h1></body></html>
+```
+
+
+
+清理现场
+
+```bash
+docker stop $(docker ps -a -q);docker rm $(docker ps -a -q)
+```
+
+
+
+# Docker 网络
+
+
+
+在宿主机上列出所有的网络类型
+
+```bash
+docker network ls
+```
+
+ 
+
+检查bridge网络
+
+```bash
+docker inspect bridge
+```
+
+
+
+在宿主机上观察bridge 网络，注意观察veth
+
+```bash
+brctl show
+```
+
+  注意：可能需要执行安装brctl sudo apt install bridge-utils
+
+
+
+查看宿主机网络配置，重点关注对应veth 配置细节
+
+```bash
+ip add
+```
+
+
+
+创建测试容器
+
+```bash
+docker run -d --name httpd1 httpd
+```
+
+
+
+在宿主机上观察brctl的变化
+
+```bash
+brctl show
+```
+
+ 
+
+查看新增加的veth的细节
+
+```bash
+ip add
+```
+
+
+
+在httpd1容器里观察eth0设置
+
+```bash
+docker exec -it httpd1 bash
+
+apt-get update && apt-get install -y iproute2
+
+ip a
+
+exit 
+```
+
+
+
+在宿主机上观察bridge 网络，注意观察veth
+
+```bash
+docker inspect network bridge
+```
+
+
+
+创建第二个httpd容器
+
+```bash
+docker run -d --name httpd2 httpd
+```
+
+
+
+在宿主机上观察新创建的veth
+
+```bash
+brctl show
+```
+
+
+
+宿主机上查看 veth 连接信息
+
+```bash
+ip link
+```
+
+
+
+在容器内部查看veth pair 信息
+
+```bash
+docker exec -it httpd2 bash
+
+cat /sys/class/net/eth0/iflink
+```
+
+
+
+创建自定义网络
+
+```bash
+docker network create --driver bridge --subnet 172.22.16.0/24 --gateway 172.22.16.1 mynetwork
+```
+
+
+
+检查mynetwork配置
+
+```bash
+docker network inspect mynetwork
+```
+
+
+
+创建容器使用新建的自定义网络
+
+```bash
+docker run -d -p 83:80 --network=mynetwork --name httpd3 httpd
+```
+
+
+
+检查httpd3容器ip地址
+
+```bash
+docker exec -it httpd3 bash
+
+apt-get update && apt-get install -y iproute2
+
+ip add
+
+exit
+```
+
+
+
+在宿主机上为前述httpd1容器创建第二块网卡使其连接到mynetwork
+
+```bash
+docker network connect mynetwork httpd1
+```
+
+
+
+检查双网卡容器httpd1的网络设置，重点观察mynetwork的相关配置
+
+```bash
+docker container inspect httpd1
+```
+
+
+
+在 httpd3 中ping httpd1
+
+```bash
+docker exec -it httpd3 bash
+
+apt-get update && apt-get install -y iputils-ping
+
+ping 172.22.16.3
+
+apt-get update && apt-get install -y traceroute
+
+traceroute 172.22.16.3
+
+exit
+```
+
+
+
+清理环境
+
+```bash
+docker stop $(docker ps -a -q);docker rm $(docker ps -a -q)
+docker network rm mynetwork
+```
+
+
+
+再观察一下宿主机网络设置
+
+```bash
+brctl show
+
+docker inspect bridge
+```
+
+
+
+# Docker 资源管理
+
+
+
+合理分配，循环释放测试
+
+```bash
+docker run -it -m 300M progrium/stress --vm 1 --vm-bytes 280M
+```
+
+  需要使用ctrl c终止容器
+
+反面例子
+
+```bash
+docker run -it -m 300M progrium/stress --vm 1 --vm-bytes 310M
+```
+
+很快内存耗尽，容器被强行终止
+
+清理现场
+
+```bash
+docker stop $(docker ps -a -q);docker rm $(docker ps -a -q)
+```
+
+CPU分配限制
+
+创建两个不同优先级的容器，根据宿主机cpu数量设置参数
+
+```bash
+docker run --name containerA -d  -c 1024 progrium/stress --cpu 1
+docker run --name containerB -d  -c 512 progrium/stress --cpu 1
+```
+
+
+
+检查两个容器的cpu使用情况
+
+```bash
+docker stats
+```
+
+
+
+关闭容器A，再检查cpu使用情况
+
+```bash
+docker stop containerA
+
+
+docker stats
+```
+
+查看容器B内部的进程
+
+清理现场
+
+```bash
+docker stop $(docker ps -a -q);docker rm $(docker ps -a -q)
+```
+
+ 
+
+# 使用 docker-compose 部署复杂应用
+
+
+
+安装dockers-compose
+
+```bash
+apt install docker-compose
+```
+
+
+
+创建docker-compose文件
+
+```bash
+nano docker-compose.yml
+```
+
+
+
+```yaml
+version: '3.3'
+services:
+   db:
+     image: mysql:5.7
+     volumes:
+
+   - db_data:/var/lib/mysql
+     tart: always
+          environment:
+            MYSQL_ROOT_PASSWORD: somewordpress
+            MYSQL_DATABASE: wordpress
+            MYSQL_USER: wordpress
+            MYSQL_PASSWORD: wordpress
+
+   wordpress:
+     depends_on:
+       - db
+     image: wordpress:latest
+     ports:
+       - "8000:80"
+     restart: always
+     environment:
+       WORDPRESS_DB_HOST: db:3306
+       WORDPRESS_DB_USER: wordpress
+       WORDPRESS_DB_PASSWORD: wordpress
+volumes:
+    db_data:
+```
+
+
+
+运行docker-compose
+
+```bash
+docker-compose up -d
+```
+
+
+
+查看容器和映像
+
+```bash
+docker ps
+
+docker images
+```
+
+
+
+查看docke volume
+
+```bash
+docker volume ls
+```
+
+
+
+查看db容器，重点关注mount字段
+
+```bash
+docker inspect root_db_1
+```
+
+
+
+停止容器
+
+```bash
+docker-compose down
+```
+
+
+
+# Docker 可视化管理
+
+安装portainer
+
+```bash
+docker run -d -p 9000:9000 --restart always -v /var/run/docker.sock:/var/run/docker.sock -v /opt/portainer:/data portainer/portainer -H unix:///var/run/docker.sock
+```
+
+
+
+安装Weave scope 
+
+```bash
+sudo curl -L git.io/scope -o /usr/local/bin/scope
+sudo chmod a+x /usr/local/bin/scope
+sudo scope launch
+```
+
+
+
+安装Prometheus
+
+```bash
+git clone https://github.com/stefanprodan/dockprom  
+cd dockprom 
+ADMIN_USER=admin ADMIN_PASSWORD=admin docker-compose up -d
+```
+
