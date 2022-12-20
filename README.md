@@ -1953,7 +1953,7 @@ docker stop $(docker ps -a -q);docker rm $(docker ps -a -q)
 
 
 
-# docker-compose 部署复杂应用
+# 使用 docker-compose 部署WordPress
 
 
 
@@ -2259,7 +2259,7 @@ docker-compose down --volumes
 
 # Docker 可视化管理
 
-安装portainer
+安装 Portainer
 
 ```bash
 docker run -d -p 9000:9000 --restart always -v /var/run/docker.sock:/var/run/docker.sock -v /opt/portainer:/data portainer/portainer -H unix:///var/run/docker.sock
@@ -2267,7 +2267,13 @@ docker run -d -p 9000:9000 --restart always -v /var/run/docker.sock:/var/run/doc
 
 
 
-安装Weave scope 
+使用 `node1:9000`访问 Portainer
+
+![image-20221220155902088](README.assets/image-20221220155902088.png)
+
+
+
+安装 Weave scope 
 
 ```bash
 sudo curl -L git.io/scope -o /usr/local/bin/scope
@@ -2277,7 +2283,46 @@ sudo scope launch
 
 
 
-安装Prometheus
+```bash
+root@node1:~# sudo curl -L git.io/scope -o /usr/local/bin/scope
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+  0     0    0     0    0     0      0      0 --:--:--  0:00:01 --:--:--     0
+  0     0    0     0    0     0      0      0 --:--:--  0:00:02 --:--:--     0
+  0     0    0     0    0     0      0      0 --:--:--  0:00:03 --:--:--     0
+100 11259  100 11259    0     0   2683      0  0:00:04  0:00:04 --:--:-- 98922
+root@node1:~# sudo chmod a+x /usr/local/bin/scope
+root@node1:~# sudo scope launch
+Unable to find image 'weaveworks/scope:1.13.2' locally
+1.13.2: Pulling from weaveworks/scope
+ba3557a56b15: Pull complete
+3ac4c0e9800c: Pull complete
+d052e74a4dae: Pull complete
+aacb9bf49f73: Pull complete
+06841e6f61a9: Pull complete
+ee99b95c7732: Pull complete
+dd0e726a9a15: Pull complete
+05cb5f9d0d32: Pull complete
+e956cf3e716a: Pull complete
+Digest: sha256:8591bb11d72f784f784ac8414660759d40b7c0d8819011660c1cc94271480a83
+Status: Downloaded newer image for weaveworks/scope:1.13.2
+51b1151df12e744a9792aa6ecc76177cec5d310b8439195f4a098b68898fc6d0
+Scope probe started
+Weave Scope is listening at the following URL(s):
+  * http://172.19.0.1:4040/
+  * http://192.168.1.231:4040/
+```
+
+
+
+使用 `node1:4040` 访问 weavscope 
+
+![image-20221220160137673](README.assets/image-20221220160137673.png)
+
+
+
+安装 Prometheus 堆栈
 
 ```bash
 git clone https://github.com/stefanprodan/dockprom  
@@ -2285,3 +2330,28 @@ cd dockprom
 ADMIN_USER=admin ADMIN_PASSWORD=admin docker-compose up -d
 ```
 
+
+
+使用 Portainer 观察 dockprom 的容器部署结果
+
+![image-20221220160624327](README.assets/image-20221220160624327.png)
+
+
+
+使用 `node1:3000` 访问 grafana ,用户名 密码均为 `admin`
+
+![image-20221220160809809](README.assets/image-20221220160809809.png)
+
+以上是报表 `Docker Host`的展示效果
+
+
+
+![image-20221220161331151](README.assets/image-20221220161331151.png)
+
+以上是报表 `Docker Containers`的展示效果
+
+
+
+从weavescope页面中观察的  dockprom  堆栈中容器的相互调用关系
+
+![image-20221220161154248](README.assets/image-20221220161154248.png)
